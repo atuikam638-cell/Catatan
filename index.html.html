@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinTrace Premium - Google Sheets Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            font-family: 'Inter', sans-serif;
+        }
+        .glass {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glass-card {
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Hide scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="flex justify-center items-center min-h-screen bg-[#070a12] p-0 sm:p-4">
+
+    <!-- Mobile Container Emulator -->
+    <div class="w-full max-w-md bg-[#0b0f19] h-[100vh] sm:h-[850px] sm:rounded-3xl shadow-2xl overflow-hidden border border-gray-800 flex flex-col relative">
+        
+        <!-- Header / Top Bar -->
+        <div class="px-6 pt-6 pb-4 flex justify-between items-center z-10 shrink-0">
+            <div>
+                <p class="text-xs text-gray-400">Selamat Datang,</p>
+                <h1 class="text-xl font-bold text-white flex items-center gap-2">
+                    FinTrace <span class="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30">Sheets Connected</span>
+                </h1>
+            </div>
+            <button onclick="toggleConfigModal()" class="w-10 h-10 rounded-full glass flex justify-center items-center text-gray-300 hover:text-white transition">
+                <i class="fa-solid fa-gear text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Main Content Area (Scrollable) -->
+        <div class="flex-1 overflow-y-auto px-6 pb-24 no-scrollbar space-y-6">
+            
+            <!-- Integration Status Alert -->
+            <div id="connectionStatusAlert" class="p-3.5 rounded-xl text-xs flex items-center justify-between transition-all duration-300">
+                <!-- Dynamic Content via JS -->
+            </div>
+
+            <!-- Balance Card -->
+            <div class="glass-card rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                <div class="absolute -right-10 -top-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl"></div>
+                <div class="absolute -left-10 -bottom-10 w-32 h-32 bg-rose-500/10 rounded-full blur-2xl"></div>
+                
+                <p class="text-xs text-gray-400 font-medium uppercase tracking-wider">Total Saldo Anda</p>
+                <h2 id="totalBalance" class="text-3xl font-extrabold text-white mt-1">Rp 0</h2>
+                
+                <div class="grid grid-cols-2 gap-4 mt-6 pt-4 border-t border-white/5">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                            <i class="fa-solid fa-arrow-down-long text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-gray-400 uppercase">Pemasukan</p>
+                            <p id="totalIncome" class="text-sm font-semibold text-emerald-400">Rp 0</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center text-rose-400">
+                            <i class="fa-solid fa-arrow-up-long text-xs"></i>
+                        </div>
+                        <div>
+                            <p class="text-[10px] text-gray-400 uppercase">Pengeluaran</p>
+                            <p id="totalExpense" class="text-sm font-semibold text-rose-400">Rp 0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Section -->
+            <div class="glass p-5 rounded-2xl">
+                <h3 class="text-sm font-semibold mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-emerald-400"></i> Alokasi Pengeluaran
+                </h3>
+                <div class="w-full relative flex justify-center items-center h-44">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Budget Limit Tracker -->
+            <div class="glass p-5 rounded-2xl space-y-4">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-bullseye text-rose-400"></i> Batas Anggaran Bulanan
+                    </h3>
+                    <span class="text-[11px] text-gray-400">Limit: Rp 3.000.000</span>
+                </div>
+                <div>
+                    <div class="flex justify-between text-xs mb-1">
+                        <span id="budgetPercentText" class="text-gray-400">Terpakai: 0%</span>
+                        <span id="budgetValueText" class="font-medium">Rp 0 / Rp 3.000.000</span>
+                    </div>
+                    <div class="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                        <div id="budgetProgressBar" class="h-full bg-emerald-500 transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Transactions Section -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-sm font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-clock-rotate-left text-blue-400"></i> Aktivitas Terakhir
+                    </h3>
+                    <button onclick="clearLocalStorageData()" class="text-xs text-rose-400/70 hover:text-rose-400 transition">
+                        Reset Cache Offline
+                    </button>
+                </div>
+                <div id="transactionList" class="space-y-2.5">
+                    <!-- Dynamic List Items -->
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sticky Bottom Navigation Bar -->
+        <div class="absolute bottom-0 left-0 right-0 h-20 glass border-t border-white/5 px-8 flex justify-around items-center z-20">
+            <button class="flex flex-col items-center gap-1 text-emerald-400">
+                <i class="fa-solid fa-house-chimney text-lg"></i>
+                <span class="text-[10px] font-medium">Dashboard</span>
+            </button>
+            
+            <!-- Center FAB -->
+            <button onclick="toggleTransactionModal()" class="w-14 h-14 bg-gradient-to-tr from-emerald-500 to-teal-400 rounded-full flex justify-center items-center shadow-lg shadow-emerald-500/20 text-white transform -translate-y-5 border-4 border-[#0b0f19] active:scale-95 transition">
+                <i class="fa-solid fa-plus text-xl"></i>
+            </button>
+            
+            <button onclick="toggleConfigModal()" class="flex flex-col items-center gap-1 text-gray-400 hover:text-white transition">
+                <i class="fa-solid fa-cloud-arrow-up text-lg"></i>
+                <span class="text-[10px] font-medium">Koneksi</span>
+            </button>
+        </div>
+
+        <!-- MODAL: ADD TRANSACTION -->
+        <div id="transactionModal" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 hidden flex flex-col justify-end transition-all duration-300">
+            <div class="bg-[#0f1422] rounded-t-3xl border-t border-white/10 p-6 space-y-4 max-h-[85%] overflow-y-auto">
+                <div class="flex justify-between items-center pb-2 border-b border-white/5">
+                    <h3 class="text-base font-bold text-white">Catat Transaksi Baru</h3>
+                    <button onclick="toggleTransactionModal()" class="text-gray-400 hover:text-white text-lg">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                
+                <form id="transactionForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1.5 font-medium">Tipe Transaksi</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button type="button" id="typeIncome" onclick="setTransactionType('Income')" class="py-2.5 rounded-xl border border-white/10 bg-white/5 font-semibold text-sm text-emerald-400 flex items-center justify-center gap-2 transition">
+                                <i class="fa-solid fa-circle-down"></i> Pemasukan
+                            </button>
+                            <button type="button" id="typeExpense" onclick="setTransactionType('Expense')" class="py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 font-semibold text-sm text-rose-400 flex items-center justify-center gap-2 transition">
+                                <i class="fa-solid fa-circle-up"></i> Pengeluaran
+                            </button>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1.5 font-medium">Jumlah Uang (Rupiah)</label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">Rp</span>
+                            <input type="number" id="inputAmount" required min="1" placeholder="0" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 transition text-base font-bold">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1.5 font-medium">Kategori</label>
+                            <select id="inputCategory" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-3 text-white focus:outline-none focus:border-emerald-500 transition text-sm">
+                                <option value="Makanan" class="bg-[#0f1422]">Makanan</option>
+                                <option value="Transportasi" class="bg-[#0f1422]">Transportasi</option>
+                                <option value="Hiburan" class="bg-[#0f1422]">Hiburan</option>
+                                <option value="Belanja" class="bg-[#0f1422]">Belanja</option>
+                                <option value="Tagihan" class="bg-[#0f1422]">Tagihan</option>
+                                <option value="Gaji" class="bg-[#0f1422]">Gaji</option>
+                                <option value="Investasi" class="bg-[#0f1422]">Investasi</option>
+                                <option value="Lainnya" class="bg-[#0f1422]">Lainnya</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 mb-1.5 font-medium">Tanggal</label>
+                            <input type="date" id="inputDate" required class="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-3 text-white focus:outline-none focus:border-emerald-500 transition text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1.5 font-medium">Catatan Singkat</label>
+                        <input type="text" id="inputNote" placeholder="cth: Beli nasi goreng" class="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 transition text-sm">
+                    </div>
+
+                    <button type="submit" id="btnSubmitTx" class="w-full py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-xl font-bold shadow-md shadow-emerald-500/10 hover:brightness-110 active:scale-[0.99] transition mt-2 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane text-xs"></i> Simpan Transaksi
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: GOOGLE SHEETS SETUP -->
+        <div id="configModal" class="absolute inset-0 bg-black/60 backdrop-blur-sm z-30 hidden flex flex-col justify-end transition-all duration-300">
+            <div class="bg-[#0f1422] rounded-t-3xl border-t border-white/10 p-6 space-y-4 max-h-[90%] overflow-y-auto">
+                <div class="flex justify-between items-center pb-2 border-b border-white/5">
+                    <h3 class="text-base font-bold text-white flex items-center gap-2">
+                        <i class="fa-solid fa-link text-emerald-400"></i> Integrasi Google Sheets
+                    </h3>
+                    <button onclick="toggleConfigModal()" class="text-gray-400 hover:text-white text-lg">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300 space-y-1">
+                    <p class="font-bold"><i class="fa-solid fa-info-circle"></i> Cara Menghubungkan:</p>
+                    <ol class="list-decimal pl-4 space-y-1 text-gray-300">
+                        <li>Buat Spreadsheet Baru di Google Sheets.</li>
+                        <li>Klik <strong>Ekstensi</strong> &gt; <strong>Apps Script</strong>.</li>
+                        <li>Salin kode Web App Apps Script (ada di deskripsi panduan).</li>
+                        <li>Klik <strong>Terapkan (Deploy)</strong> &gt; <strong>Penerapan baru</strong> &gt; pilih jenis <strong>Aplikasi Web</strong>.</li>
+                        <li>Akses pilih <em>"Siapa saja" (Anyone)</em>, lalu salin URL Web App yang dihasilkan ke kotak di bawah ini.</li>
+                    </ol>
+                </div>
+
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1.5 font-medium">Google Apps Script Web App URL</label>
+                        <input type="url" id="inputScriptUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-emerald-500 transition">
+                    </div>
+                    <button onclick="saveScriptUrl()" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-check"></i> Simpan URL & Sinkronisasi
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- JAVASCRIPT CONTROLLER -->
+    <script>
+        // Application State
+        let transactions = [];
+        let currentType = 'Expense';
+        let scriptUrl = localStorage.getItem('finTrace_scriptUrl') || '';
+        let expenseChart = null;
+        const budgetLimit = 3000000;
+
+        // Initialize App
+        window.addEventListener('DOMContentLoaded', () => {
+            // Set Default Date field to today
+            document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+            
+            // Load from LocalStorage Cache first
+            const cached = localStorage.getItem('finTrace_transactions');
+            if (cached) {
+                transactions = JSON.parse(cached);
+            }
+            
+            if (scriptUrl) {
+                document.getElementById('inputScriptUrl').value = scriptUrl;
+                fetchDataFromSheets();
+            } else {
+                updateUI();
+            }
+        });
+
+        // Toggle Modals
+        function toggleTransactionModal() {
+            const modal = document.getElementById('transactionModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function toggleConfigModal() {
+            const modal = document.getElementById('configModal');
+            modal.classList.toggle('hidden');
+        }
+
+        // Toggle Input Income/Expense
+        function setTransactionType(type) {
+            currentType = type;
+            const incBtn = document.getElementById('typeIncome');
+            const expBtn = document.getElementById('typeExpense');
+            
+            if(type === 'Income') {
+                incBtn.className = "py-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 font-semibold text-sm text-emerald-400 flex items-center justify-center gap-2 transition";
+                expBtn.className = "py-2.5 rounded-xl border border-white/10 bg-white/5 font-semibold text-sm text-gray-400 flex items-center justify-center gap-2 transition";
+            } else {
+                incBtn.className = "py-2.5 rounded-xl border border-white/10 bg-white/5 font-semibold text-sm text-gray-400 flex items-center justify-center gap-2 transition";
+                expBtn.className = "py-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 font-semibold text-sm text-rose-400 flex items-center justify-center gap-2 transition";
+            }
+        }
+
+        // Save Integration Config
+        function saveScriptUrl() {
+            const url = document.getElementById('inputScriptUrl').value.trim();
+            if(url) {
+                scriptUrl = url;
+                localStorage.setItem('finTrace_scriptUrl', url);
+                toggleConfigModal();
+                fetchDataFromSheets();
+            } else {
+                scriptUrl = '';
+                localStorage.removeItem('finTrace_scriptUrl');
+                alert('URL dihapus. Aplikasi berjalan dalam mode lokal.');
+                updateUI();
+            }
+        }
+
+        // Reset Data Local Cache
+        function clearLocalStorageData() {
+            if(confirm("Apakah Anda yakin ingin menghapus cache lokal offline di HP ini? Data di Google Sheets Anda akan tetap aman.")) {
+                localStorage.removeItem('finTrace_transactions');
+                transactions = [];
+                updateUI();
+            }
+        }
+
+        // Fetch Data from Google Sheets API
+        function fetchDataFromSheets() {
+            if (!scriptUrl) return;
+            
+            showConnectionAlert('Syncing...', 'bg-blue-500/10 text-blue-400 border border-blue-500/20', true);
+
+            fetch(`${scriptUrl}?action=read`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && Array.isArray(data)) {
+                        transactions = data.map(item => ({
+                            id: item.id || Date.now() + Math.random(),
+                            amount: parseFloat(item.amount),
+                            type: item.type,
+                            category: item.category,
+                            date: item.date,
+                            note: item.note || ''
+                        }));
+                        // Cache locally
+                        localStorage.setItem('finTrace_transactions', JSON.stringify(transactions));
+                        updateUI();
+                        showConnectionAlert('Terhubung ke Google Sheets', 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20', false);
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showConnectionAlert('Gagal sinkronisasi data Sheets. Mode Offline Aktif.', 'bg-amber-500/10 text-amber-400 border border-amber-500/20', false);
+                    updateUI();
+                });
+        }
+
+        // Handle Add Transaction Submit
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const amount = parseFloat(document.getElementById('inputAmount').value);
+            const category = document.getElementById('inputCategory').value;
+            const date = document.getElementById('inputDate').value;
+            const note = document.getElementById('inputNote').value.trim();
+            
+            const newTx = {
+                id: Date.now().toString(),
+                amount: amount,
+                type: currentType,
+                category: category,
+                date: date,
+                note: note
+            };
+
+            // Push to current local array state
+            transactions.unshift(newTx);
+            localStorage.setItem('finTrace_transactions', JSON.stringify(transactions));
+            updateUI();
+            toggleTransactionModal();
+
+            // Reset inputs
+            document.getElementById('inputAmount').value = '';
+            document.getElementById('inputNote').value = '';
+            document.getElementById('inputDate').value = new Date().toISOString().split('T')[0];
+
+            // Send to cloud Google Sheets if connected
+            if (scriptUrl) {
+                showConnectionAlert('Mengirim transaksi ke cloud...', 'bg-blue-500/10 text-blue-400 border border-blue-500/20', true);
+                
+                // Form URL Encoded payload configuration for Apps Script POST compatibility
+                const formData = new URLSearchParams();
+                formData.append('action', 'insert');
+                formData.append('id', newTx.id);
+                formData.append('amount', newTx.amount);
+                formData.append('type', newTx.type);
+                formData.append('category', newTx.category);
+                formData.append('date', newTx.date);
+                formData.append('note', newTx.note);
+
+                fetch(scriptUrl, {
+                    method: 'POST',
+                    mode: 'no-cors', // Standard cross-origin setting for direct Apps Script deployment macros
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData.toString()
+                })
+                .then(() => {
+                    // Because no-cors doesn't return readable responses, refresh text safely
+                    setTimeout(() => fetchDataFromSheets(), 1500);
+                })
+                .catch(err => {
+                    console.error("Gagal mengirim ke cloud:", err);
+                    showConnectionAlert('Gagal mengirim ke Sheets. Tersimpan offline.', 'bg-rose-500/10 text-rose-400 border border-rose-500/20', false);
+                });
+            }
+        }
+
+        // Alert Connection Message Render
+        function showConnectionAlert(msg, classes, spin) {
+            const alertBox = document.getElementById('connectionStatusAlert');
+            alertBox.className = `p-3.5 rounded-xl text-xs flex items-center justify-between transition-all duration-300 ${classes}`;
+            alertBox.innerHTML = `
+                <span class="flex items-center gap-2 font-medium">
+                    ${spin ? '<i class="fa-solid fa-circle-notch animate-spin"></i>' : '<i class="fa-solid fa-cloud"></i>'}
+                    ${msg}
+                </span>
+                ${scriptUrl ? '' : '<button onclick="toggleConfigModal()" class="underline font-bold">Sambungkan</button>'}
+            `;
+        }
+
+        // UI Refresh Orchestrator
+        function updateUI() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let categoryGroup = {};
+
+            transactions.forEach(t => {
+                if (t.type === 'Income') {
+                    totalIncome += t.amount;
+                } else {
+                    totalExpense += t.amount;
+                    categoryGroup[t.category] = (categoryGroup[t.category] || 0) + t.amount;
+                }
+            });
+
+            const totalBalance = totalIncome - totalExpense;
+
+            // Update Metrics Cards text
+            document.getElementById('totalBalance').innerText = formatCurrency(totalBalance);
+            document.getElementById('totalIncome').innerText = formatCurrency(totalIncome);
+            document.getElementById('totalExpense').innerText = formatCurrency(totalExpense);
+
+            // Update Connection Header Alert Box context if not set
+            if (!scriptUrl) {
+                showConnectionAlert('Mode Penyimpanan Offline Aktif (Lokal HP).', 'bg-white/5 text-gray-400 border border-white/10', false);
+            }
+
+            // Update Budget Progress Bar Calculation
+            const budgetPercent = Math.min((totalExpense / budgetLimit) * 100, 100);
+            document.getElementById('budgetPercentText').innerText = `Terpakai: ${Math.round(budgetPercent)}%`;
+            document.getElementById('budgetValueText').innerText = `${formatCurrency(totalExpense)} / ${formatCurrency(budgetLimit)}`;
+            
+            const progressBar = document.getElementById('budgetProgressBar');
+            progressBar.style.width = `${budgetPercent}%`;
+            if (budgetPercent >= 85) {
+                progressBar.className = "h-full bg-rose-500 transition-all duration-500";
+            } else if (budgetPercent >= 65) {
+                progressBar.className = "h-full bg-amber-500 transition-all duration-500";
+            } else {
+                progressBar.className = "h-full bg-emerald-500 transition-all duration-500";
+            }
+
+            // Render Recent Transaction Items (Max last 10 entries)
+            const listContainer = document.getElementById('transactionList');
+            listContainer.innerHTML = '';
+            
+            if (transactions.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-6 text-xs text-gray-500">
+                        Belum ada transaksi tercatat.
+                    </div>
+                `;
+            } else {
+                transactions.slice(0, 10).forEach(t => {
+                    const isInc = t.type === 'Income';
+                    const icon = isInc ? 'fa-circle-down text-emerald-400' : 'fa-circle-up text-rose-400';
+                    const iconBg = isInc ? 'bg-emerald-500/10' : 'bg-rose-500/10';
+                    const sign = isInc ? '+' : '-';
+                    const amountClass = isInc ? 'text-emerald-400' : 'text-white';
+                    
+                    const item = document.createElement('div');
+                    item.className = "glass p-3.5 rounded-xl flex items-center justify-between transition border border-white/5";
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center">
+                                <i class="fa-solid ${icon} text-sm"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-white">${t.note || t.category}</p>
+                                <p class="text-[10px] text-gray-500 mt-0.5">${t.category} • ${formatDate(t.date)}</p>
+                            </div>
+                        </div>
+                        <p class="text-xs font-bold ${amountClass}">${sign} ${formatCurrency(t.amount)}</p>
+                    `;
+                    listContainer.appendChild(item);
+                });
+            }
+
+            // Render/Refresh Chart.js Distribution
+            renderChart(categoryGroup);
+        }
+
+        // Render Chart.js logic
+        function renderChart(categoryData) {
+            const ctx = document.getElementById('expenseChart').getContext('2d');
+            
+            const labels = Object.keys(categoryData);
+            const dataValues = Object.values(categoryData);
+
+            if (expenseChart) {
+                expenseChart.destroy();
+            }
+
+            if (labels.length === 0) {
+                // Draw safe configuration placeholder layout inside canvas loop
+                expenseChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Belum Ada Pengeluaran'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['rgba(255, 255, 255, 0.05)'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        cutout: '75%',
+                        plugins: { legend: { display: true, position: 'bottom', labels: { color: '#6b7280', font: { size: 10 } } } }
+                    }
+                });
+                return;
+            }
+
+            const customColors = [
+                '#f43f5e', '#10b981', '#3b82f6', '#f59e0b', 
+                '#8b5cf6', '#ec4899', '#06b6d4', '#64748b'
+            ];
+
+            expenseChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: dataValues,
+                        backgroundColor: customColors.slice(0, labels.length),
+                        borderWidth: 1,
+                        borderColor: '#0f1422'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                color: '#9ca3af',
+                                font: { size: 11, weight: '500' },
+                                boxWidth: 10,
+                                padding: 12
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Helpers Utilities
+        function formatCurrency(num) {
+            return 'Rp ' + Math.abs(num).toLocaleString('id-ID');
+        }
+
+        function formatDate(dateStr) {
+            if(!dateStr) return '';
+            const options = { day: 'numeric', month: 'short' };
+            return new Date(dateStr).toLocaleDateString('id-ID', options);
+        }
+    </script>
+</body>
+</html>
